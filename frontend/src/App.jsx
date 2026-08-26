@@ -150,7 +150,7 @@ export default function App() {
   const unacknowledgedCritical = recentAlerts.filter(a => a.severity === 'CRITICAL' && !a.is_acknowledged);
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col selection:bg-cyan-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col selection:bg-sky-500 selection:text-white">
       {/* Top Navigation Bar */}
       <Navbar 
         activeTab={activeTab} 
@@ -164,7 +164,7 @@ export default function App() {
 
       {/* Critical Alert Emergency Banner */}
       {unacknowledgedCritical.length > 0 && (
-        <div className="bg-rose-600 text-white px-4 py-2.5 shadow-xl flex items-center justify-between animate-pulse">
+        <div className="bg-rose-600 text-white px-4 py-2.5 shadow-md flex items-center justify-between animate-pulse">
           <div className="flex items-center space-x-2.5 max-w-5xl">
             <AlertOctagon className="h-5 w-5 shrink-0" />
             <span className="text-xs font-black uppercase tracking-wider">
@@ -176,7 +176,7 @@ export default function App() {
           </div>
           <button
             onClick={() => setActiveTab('alerts')}
-            className="px-3 py-1 bg-white text-rose-700 rounded-lg text-xs font-black uppercase hover:bg-rose-100 transition-all shrink-0 ml-3"
+            className="px-3 py-1 bg-white text-rose-700 rounded-lg text-xs font-black uppercase hover:bg-rose-50 transition-all shrink-0 ml-3 shadow-2xs"
           >
             Review Alarms ({unacknowledgedCritical.length})
           </button>
@@ -259,21 +259,21 @@ export default function App() {
 
       {/* Floating Toast Notification */}
       {toastNotification && (
-        <div className="fixed bottom-5 right-5 z-50 max-w-sm w-full bg-slate-900 border border-slate-700 rounded-2xl p-4 shadow-2xl flex items-start justify-between gap-3 animate-slide-in">
+        <div className="fixed bottom-5 right-5 z-50 max-w-sm w-full bg-white border border-slate-200 rounded-2xl p-4 shadow-xl flex items-start justify-between gap-3 animate-in slide-in-from-bottom-5">
           <div className="flex items-start space-x-3">
             <div className={`p-2 rounded-xl mt-0.5 ${
-              toastNotification.type === 'danger' ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/20 text-emerald-400'
+              toastNotification.type === 'danger' ? 'bg-rose-50 text-rose-600 border border-rose-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
             }`}>
               {toastNotification.type === 'danger' ? <AlertOctagon className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
             </div>
             <div>
-              <h4 className="text-xs font-bold text-slate-100">{toastNotification.title}</h4>
-              <p className="text-xs text-slate-300 mt-0.5">{toastNotification.message}</p>
+              <h4 className="text-xs font-bold text-slate-900">{toastNotification.title}</h4>
+              <p className="text-xs text-slate-600 mt-0.5">{toastNotification.message}</p>
             </div>
           </div>
           <button 
             onClick={() => setToastNotification(null)}
-            className="text-slate-500 hover:text-white"
+            className="text-slate-400 hover:text-slate-700"
           >
             <X className="h-4 w-4" />
           </button>
@@ -281,8 +281,8 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-4 text-center text-xs text-slate-500">
-        DialySense AI Prototype • ESP32 IoT → FastAPI → PostgreSQL → Scikit-Learn AI → WebSocket → React Dashboard
+      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
+        DialySense AI • Clinical Hemodialysis Telemetry, Risk Stratification & Decision Support System
       </footer>
     </div>
   );

@@ -35,6 +35,7 @@ export const acknowledgeAllAlerts = () => api.post('/alerts/acknowledge-all');
 
 export const generateSessionReport = (sessionId) => api.post(`/reports/session/${sessionId}/generate`);
 export const getSessionReportInfo = (sessionId) => api.get(`/reports/session/${sessionId}`);
+export const getDownloadReportUrl = (filename) => `${API_BASE_URL}/reports/download/${filename}`;
 
 export const setSimulationMode = (mode, sessionId, patientId) => api.post('/simulation/mode', { mode, session_id: sessionId, patient_id: patientId });
 export const triggerSimulationTick = (sessionId, patientId, mode) => api.post('/simulation/tick', null, { params: { session_id: sessionId, patient_id: patientId, mode } });

@@ -3,17 +3,50 @@ import {
   AlertTriangle, 
   ShieldAlert, 
   CheckCircle2, 
-  CheckCheck, 
-  Filter, 
   Clock, 
-  AlertOctagon,
-  Info
+  Filter, 
+  AlertOctagon, 
+  Info,
+  Check
 } from 'lucide-react';
-import { acknowledgeAlert, acknowledgeAllAlerts } from '../services/api';
+import { acknowledgeAlert } from '../services/api';
 
 export default function Alerts({ alerts = [], onRefresh, onNotification }) {
   const [severityFilter, setSeverityFilter] = useState('ALL');
   const [unackOnly, setUnackOnly] = useState(false);
+
+  const handleAcknowledge = async (alertId) => {
+    try {
+      await acknowledgeAlert(alertId);
+      if (onNotification) {
+        onNotification({
+          type: 'info',
+          title: 'Alarm Acknowledged',
+          message: 'Clinical incident marked as reviewed by duty nurse.'
+        });
+      }
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      console.error('Ack alert error:', err);
+    }
+  };
+
+  const handleAcknowledgeAll = async () => {
+    try {
+      const unackAlerts = alerts.filter(a => !a.is_acknowledged);
+      await Promise.all(unackAlerts.map(a => acknowledgeAlert(a.id)));
+      if (onNotification) {
+        onNotification({
+          type: 'success',
+          title: 'All Alarms Cleared',
+          message: `Acknowledged ${unackAlerts.length} clinical alarms.`
+        });
+      }
+      if (onRefresh) onRefresh();
+    } catch (err) {
+      console.error('Ack all error:', err);
+    }
+  };
 
   const filteredAlerts = alerts.filter(a => {
     if (severityFilter !== 'ALL' && a.severity !== severityFilter) return false;
@@ -21,162 +54,148 @@ export default function Alerts({ alerts = [], onRefresh, onNotification }) {
     return true;
   });
 
-  const handleAcknowledge = async (id) => {
-    try {
-      await acknowledgeAlert(id, 'Clinical Staff');
-      if (onNotification) {
-        onNotification({
-          type: 'success',
-          title: 'Alert Acknowledged',
-          message: `Alert #${id} marked as acknowledged.`
-        });
-      }
-      onRefresh();
-    } catch (err) {
-      console.error('Ack error:', err);
-    }
-  };
-
-  const handleAcknowledgeAll = async () => {
-    try {
-      await acknowledgeAllAlerts();
-      if (onNotification) {
-        onNotification({
-          type: 'success',
-          title: 'All Alerts Acknowledged',
-          message: 'All pending alarms cleared from active queue.'
-        });
-      }
-      onRefresh();
-    } catch (err) {
-      console.error('Ack all error:', err);
-    }
-  };
+  const criticalCount = alerts.filter(a => a.severity === 'CRITICAL' && !a.is_acknowledged).length;
+  const warningCount = alerts.filter(a => a.severity === 'WARNING' && !a.is_acknowledged).length;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-100 tracking-tight flex items-center gap-2">
-            <AlertTriangle className="h-6 w-6 text-amber-400" />
-            Smart Alert & Clinical Incident Center
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <AlertTriangle className="h-6 w-6 text-amber-500" />
+            Clinical Alarms & Incident Center
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400">
-            Real-time threshold and AI risk-driven alerts for hemodialysis abnormalities
+          <p className="text-xs sm:text-sm text-slate-500 font-medium">
+            Real-time threshold violation logs, alarm prioritization & nursing sign-off
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        {alerts.some(a => !a.is_acknowledged) && (
           <button
             onClick={handleAcknowledgeAll}
-            className="flex items-center space-x-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition-all"
+            className="flex items-center space-x-1.5 px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold shadow-2xs transition-all self-start sm:self-auto"
           >
-            <CheckCheck className="h-4 w-4 text-emerald-400" />
-            <span>Acknowledge All</span>
+            <Check className="h-4 w-4" />
+            <span>Acknowledge All ({alerts.filter(a => !a.is_acknowledged).length})</span>
           </button>
-        </div>
+        )}
       </div>
 
-      {/* Filter Bar */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex items-center space-x-2">
-          <Filter className="h-4 w-4 text-slate-400" />
-          <span className="text-slate-400 font-semibold">Severity:</span>
-          {['ALL', 'CRITICAL', 'WARNING', 'INFO'].map(sev => (
-            <button
-              key={sev}
-              onClick={() => setSeverityFilter(sev)}
-              className={`px-3 py-1 rounded-lg font-bold transition-all ${
-                severityFilter === sev
-                  ? (sev === 'CRITICAL' ? 'bg-rose-600 text-white' : (sev === 'WARNING' ? 'bg-amber-600 text-white' : 'bg-cyan-600 text-white'))
-                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700'
-              }`}
-            >
-              {sev}
-            </button>
-          ))}
+      {/* Filter and Summary Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm">
+        {/* Severity Tabs */}
+        <div className="flex flex-wrap items-center gap-2">
+          {['ALL', 'CRITICAL', 'WARNING', 'INFO'].map((sev) => {
+            const count = sev === 'ALL' 
+              ? alerts.length 
+              : alerts.filter(a => a.severity === sev).length;
+            
+            const isSelected = severityFilter === sev;
+            return (
+              <button
+                key={sev}
+                onClick={() => setSeverityFilter(sev)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                  isSelected
+                    ? 'bg-sky-600 text-white shadow-xs'
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                <span>{sev}</span>
+                <span className={`ml-1.5 px-1.5 py-0.2 rounded-full text-[10px] ${
+                  isSelected ? 'bg-sky-700 text-white' : 'bg-slate-200 text-slate-700'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        <label className="flex items-center space-x-2 cursor-pointer text-slate-300 select-none">
-          <input 
+        {/* Unack Toggle */}
+        <label className="flex items-center space-x-2 text-xs text-slate-700 cursor-pointer font-medium">
+          <input
             type="checkbox"
             checked={unackOnly}
             onChange={(e) => setUnackOnly(e.target.checked)}
-            className="rounded bg-slate-950 border-slate-700 text-cyan-500 focus:ring-0"
+            className="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
           />
           <span>Unacknowledged Only</span>
         </label>
       </div>
 
-      {/* Alerts List */}
+      {/* Alert Cards Feed */}
       <div className="space-y-3">
         {filteredAlerts.length > 0 ? (
           filteredAlerts.map((alert) => {
-            const isCritical = alert.severity === 'CRITICAL';
-            const isWarning = alert.severity === 'WARNING';
+            const isCrit = alert.severity === 'CRITICAL';
+            const isWarn = alert.severity === 'WARNING';
 
-            const cardBorder = isCritical 
-              ? 'border-rose-800/80 bg-rose-950/20' 
-              : (isWarning ? 'border-amber-800/80 bg-amber-950/20' : 'border-slate-800 bg-slate-900/90');
-
-            const badgeBg = isCritical
-              ? 'bg-rose-600 text-white animate-pulse'
-              : (isWarning ? 'bg-amber-500 text-slate-950' : 'bg-blue-600 text-white');
-
-            const Icon = isCritical ? AlertOctagon : (isWarning ? AlertTriangle : Info);
+            const cardBorder = alert.is_acknowledged 
+              ? 'border-slate-200/80 bg-white opacity-85' 
+              : (isCrit ? 'border-rose-200 bg-rose-50/50 shadow-danger' : (isWarn ? 'border-amber-200 bg-amber-50/50 shadow-warning' : 'border-sky-200 bg-sky-50/50'));
 
             return (
-              <div 
+              <div
                 key={alert.id}
-                className={`border rounded-2xl p-4 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${cardBorder}`}
+                className={`border rounded-3xl p-5 shadow-sm transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${cardBorder}`}
               >
                 <div className="flex items-start space-x-3.5">
-                  <div className={`p-2 rounded-xl mt-0.5 ${
-                    isCritical ? 'bg-rose-500/20 text-rose-400' : (isWarning ? 'bg-amber-500/20 text-amber-400' : 'bg-blue-500/20 text-blue-400')
+                  <div className={`p-2.5 rounded-2xl border ${
+                    isCrit 
+                      ? 'bg-rose-100/70 border-rose-300 text-rose-700' 
+                      : (isWarn ? 'bg-amber-100/70 border-amber-300 text-amber-700' : 'bg-sky-100/70 border-sky-300 text-sky-700')
                   }`}>
-                    <Icon className="h-5 w-5" />
+                    {isCrit ? <AlertOctagon className="h-5 w-5 animate-pulse" /> : (isWarn ? <AlertTriangle className="h-5 w-5" /> : <Info className="h-5 w-5" />)}
                   </div>
+
                   <div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${badgeBg}`}>
+                    <div className="flex items-center space-x-2.5">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                        isCrit ? 'bg-rose-600 text-white' : (isWarn ? 'bg-amber-500 text-white' : 'bg-sky-600 text-white')
+                      }`}>
                         {alert.severity}
                       </span>
-                      <h3 className="text-sm font-bold text-slate-100">{alert.title}</h3>
-                      <span className="text-[11px] font-mono text-slate-400">
-                        {new Date(alert.timestamp).toLocaleTimeString()}
-                      </span>
+                      <h3 className="text-sm font-bold text-slate-900">{alert.title}</h3>
                     </div>
-                    <p className="text-xs text-slate-300 mt-1 max-w-3xl">
+                    <p className="text-xs text-slate-700 font-medium mt-1 max-w-3xl">
                       {alert.message}
                     </p>
-                    {alert.is_acknowledged && (
-                      <div className="text-[10px] text-emerald-400 mt-1.5 flex items-center gap-1 font-medium">
-                        <CheckCircle2 className="h-3 w-3" />
-                        <span>Acknowledged by {alert.acknowledged_by || 'Staff'} at {new Date(alert.acknowledged_at).toLocaleTimeString()}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center space-x-3 mt-2 text-[11px] text-slate-500 font-mono">
+                      <span>Time: {new Date(alert.timestamp).toLocaleTimeString()} ({new Date(alert.timestamp).toLocaleDateString()})</span>
+                      <span>•</span>
+                      <span>Event Code: {alert.alert_type}</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Acknowledge Button */}
-                {!alert.is_acknowledged && (
-                  <button
-                    onClick={() => handleAcknowledge(alert.id)}
-                    className="self-end md:self-auto px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                    <span>Acknowledge</span>
-                  </button>
-                )}
+                {/* Ack Button / Status */}
+                <div className="self-end md:self-auto shrink-0">
+                  {alert.is_acknowledged ? (
+                    <span className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <span>Acknowledged</span>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleAcknowledge(alert.id)}
+                      className="px-3.5 py-1.5 bg-white hover:bg-slate-50 text-slate-800 border border-slate-300 rounded-xl text-xs font-bold shadow-2xs transition-all"
+                    >
+                      Acknowledge
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })
         ) : (
-          <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-12 text-center text-slate-400 text-xs">
-            <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto mb-3" />
-            <p className="text-sm font-bold text-slate-200">No active alerts matching filter criteria</p>
-            <p className="text-slate-400 mt-1">All hemodialysis clinical parameters are within baseline tolerances.</p>
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-12 text-center shadow-sm space-y-3">
+            <CheckCircle2 className="h-10 w-10 text-emerald-500 mx-auto" />
+            <h3 className="text-sm font-bold text-slate-900">No Alarms Matching Filters</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto font-medium">
+              All hemodialysis physiological vitals and circuit parameters are currently within safe limits.
+            </p>
           </div>
         )}
       </div>

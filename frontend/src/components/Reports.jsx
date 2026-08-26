@@ -1,72 +1,92 @@
 import React, { useState } from 'react';
-import { FileText, Download, Play, CheckCircle2, Clock, ShieldAlert, Activity, Sparkles } from 'lucide-react';
-import { generateSessionReport } from '../services/api';
+import { 
+  FileText, 
+  Download, 
+  FileCheck, 
+  Calendar, 
+  Clock, 
+  AlertTriangle, 
+  CheckCircle2, 
+  Printer, 
+  Sparkles,
+  ExternalLink,
+  ShieldCheck
+} from 'lucide-react';
+import { generateSessionReport, getDownloadReportUrl } from '../services/api';
 
 export default function Reports({ sessions = [], onNotification }) {
-  const [generatingId, setGeneratingId] = useState(null);
-  const [lastGeneratedReport, setLastGeneratedReport] = useState(null);
+  const [generatingSessionId, setGeneratingSessionId] = useState(null);
+  const [latestGeneratedReport, setLatestGeneratedReport] = useState(null);
 
   const handleGenerateReport = async (sessionId) => {
     try {
-      setGeneratingId(sessionId);
+      setGeneratingSessionId(sessionId);
       const res = await generateSessionReport(sessionId);
-      setLastGeneratedReport(res.data);
+      setLatestGeneratedReport(res.data);
       if (onNotification) {
         onNotification({
           type: 'success',
-          title: 'PDF Report Ready',
-          message: `Generated clinical session report: ${res.data.filename}`
+          title: 'Clinical PDF Report Compiled',
+          message: `Official session report ${res.data.report_code} generated using ReportLab.`
         });
       }
     } catch (err) {
-      console.error('Report generation error:', err);
+      console.error('Generate report error:', err);
+      if (onNotification) {
+        onNotification({
+          type: 'danger',
+          title: 'Report Generation Failed',
+          message: err.response?.data?.detail || 'Error compiling PDF report.'
+        });
+      }
     } finally {
-      setGeneratingId(null);
+      setGeneratingSessionId(null);
     }
   };
-
-  const API_HOST = 'http://localhost:8000';
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-xl sm:text-2xl font-black text-slate-100 tracking-tight flex items-center gap-2">
-          <FileText className="h-6 w-6 text-cyan-400" />
-          Clinical Hemodialysis Session Reports
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-400">
-          Export automated ReportLab PDF clinical summaries, hemodynamic trends & AI risk logs
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <FileText className="h-6 w-6 text-sky-600" />
+            Clinical Dialysis Session Reports
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 font-medium">
+            Automated ReportLab medical session summaries, vital telemetry statistics & physician sign-off documentation
+          </p>
+        </div>
       </div>
 
-      {/* Generated Report Highlight Banner */}
-      {lastGeneratedReport && (
-        <div className="bg-gradient-to-r from-cyan-950/60 to-blue-950/60 border border-cyan-800 rounded-2xl p-5 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center space-x-3">
-            <div className="p-3 bg-cyan-500/20 rounded-xl text-cyan-400">
-              <Sparkles className="h-6 w-6" />
+      {/* Generated Report Highlight Card */}
+      {latestGeneratedReport && (
+        <div className="bg-sky-50/70 border border-sky-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in">
+          <div className="flex items-start space-x-3.5">
+            <div className="p-3 rounded-2xl bg-white border border-sky-200 shadow-xs">
+              <FileCheck className="h-6 w-6 text-sky-600" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-xs font-mono font-bold text-cyan-300">
-                  {lastGeneratedReport.report_code}
+                <span className="text-xs font-mono font-bold text-sky-700 bg-white px-2.5 py-0.5 rounded-lg border border-sky-200">
+                  {latestGeneratedReport.report_code}
                 </span>
-                <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" /> Report Compiled
-                </span>
+                <span className="text-xs font-bold text-slate-900">Official Clinical Summary Ready</span>
               </div>
-              <p className="text-xs text-slate-200 font-semibold mt-0.5">
-                {lastGeneratedReport.filename}
+              <p className="text-xs text-slate-700 font-medium mt-1">
+                Compiled Document: <span className="font-mono text-slate-900">{latestGeneratedReport.pdf_filename}</span>
               </p>
+              <div className="text-[11px] text-slate-500 font-medium mt-1">
+                Generated: {new Date(latestGeneratedReport.generated_at).toLocaleString()}
+              </div>
             </div>
           </div>
 
           <a
-            href={`${API_HOST}${lastGeneratedReport.download_url}`}
+            href={getDownloadReportUrl(latestGeneratedReport.pdf_filename)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center space-x-2 px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-600/30 transition-all"
+            className="flex items-center space-x-2 px-5 py-2.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold shadow-sm shadow-sky-600/20 transition-all self-start md:self-auto"
           >
             <Download className="h-4 w-4" />
             <span>Download Official PDF</span>
@@ -74,68 +94,66 @@ export default function Reports({ sessions = [], onNotification }) {
         </div>
       )}
 
-      {/* Sessions List */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+      {/* Sessions Report Table */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-sm">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+            Available Dialysis Session Records
+          </h3>
+          <span className="text-xs text-slate-500 font-medium">{sessions.length} Recorded Sessions</span>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
+            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-3 px-4">Session Code</th>
-                <th className="py-3 px-4">Patient Profile</th>
-                <th className="py-3 px-4">Machine Unit</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Prescribed Target</th>
-                <th className="py-3 px-4">Treatment Time</th>
-                <th className="py-3 px-4 text-right">PDF Generator</th>
+                <th className="py-3.5 px-5">Session Code</th>
+                <th className="py-3.5 px-5">Patient Name</th>
+                <th className="py-3.5 px-5">Assigned Machine</th>
+                <th className="py-3.5 px-5">Prescription</th>
+                <th className="py-3.5 px-5">Status</th>
+                <th className="py-3.5 px-5">Start Time</th>
+                <th className="py-3.5 px-5 text-right">Medical PDF</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
-              {sessions.map((s) => {
-                const isOngoing = s.status === 'ONGOING';
-                const isGenerating = generatingId === s.id;
-
+            <tbody className="divide-y divide-slate-100">
+              {sessions.map((session) => {
+                const isGenerating = generatingSessionId === session.id;
                 return (
-                  <tr key={s.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-cyan-400">
-                      {s.session_code}
+                  <tr key={session.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3.5 px-5 font-mono font-bold text-sky-700">
+                      {session.session_code}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-100">{s.patient?.name || `Patient #${s.patient_id}`}</div>
-                      <div className="text-[11px] text-slate-400">{s.patient?.disease_stage || 'Stage 5 CKD'}</div>
+                    <td className="py-3.5 px-5">
+                      <div className="font-bold text-slate-900">{session.patient?.name || `Patient #${session.patient_id}`}</div>
+                      <div className="text-[11px] text-slate-400">{session.patient?.disease_stage || 'Stage 5 CKD'}</div>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-300">
-                      {s.machine?.machine_code || 'DIALY-01'}
+                    <td className="py-3.5 px-5 font-medium text-slate-700">
+                      {session.machine?.machine_code || `Unit #${session.machine_id}`}
                     </td>
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        isOngoing ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-slate-800 text-slate-300'
+                    <td className="py-3.5 px-5 text-slate-600 font-medium">
+                      {session.target_duration_mins} min • {session.target_uf_volume_ml} mL
+                    </td>
+                    <td className="py-3.5 px-5">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                        session.status === 'ONGOING' 
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                          : 'bg-slate-100 text-slate-700'
                       }`}>
-                        {s.status}
+                        {session.status}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-300">
-                      {s.target_duration_mins} min • {s.target_uf_volume_ml} mL UF
+                    <td className="py-3.5 px-5 text-slate-500 font-mono text-[11px]">
+                      {session.start_time ? new Date(session.start_time).toLocaleString() : 'N/A'}
                     </td>
-                    <td className="py-3.5 px-4 text-slate-400 font-mono text-[11px]">
-                      {new Date(s.start_time).toLocaleDateString()} {new Date(s.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3.5 px-5 text-right">
                       <button
-                        onClick={() => handleGenerateReport(s.id)}
+                        onClick={() => handleGenerateReport(session.id)}
                         disabled={isGenerating}
-                        className="px-3 py-1.5 rounded-lg bg-cyan-950 hover:bg-cyan-900 text-cyan-300 border border-cyan-800 text-[11px] font-bold inline-flex items-center gap-1.5 transition-all"
+                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl text-xs font-bold shadow-2xs transition-all disabled:opacity-50"
                       >
-                        {isGenerating ? (
-                          <>
-                            <Clock className="h-3.5 w-3.5 animate-spin" />
-                            <span>Building PDF...</span>
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="h-3.5 w-3.5" />
-                            <span>Generate PDF</span>
-                          </>
-                        )}
+                        <Printer className="h-3.5 w-3.5" />
+                        <span>{isGenerating ? 'Compiling...' : 'Generate PDF'}</span>
                       </button>
                     </td>
                   </tr>

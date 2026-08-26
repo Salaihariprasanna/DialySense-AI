@@ -2,257 +2,261 @@ import React, { useState } from 'react';
 import { 
   Users, 
   UserPlus, 
-  Play, 
   Search, 
-  Edit3, 
-  Trash2, 
-  Activity, 
+  Play, 
   CheckCircle2, 
-  X,
-  FileText
+  Clock, 
+  Phone, 
+  Calendar,
+  X
 } from 'lucide-react';
 import { createPatient, createSession } from '../services/api';
 
 export default function Patients({ 
-  patients, 
-  sessions, 
-  machines, 
+  patients = [], 
+  machines = [], 
   onRefresh, 
-  onSelectSession, 
   onNotification 
 }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isSessionModalOpen, setIsSessionModalOpen] = useState(false);
+  const [isAddPatientOpen, setIsAddPatientOpen] = useState(false);
+  const [isStartSessionOpen, setIsStartSessionOpen] = useState(false);
   const [selectedPatientForSession, setSelectedPatientForSession] = useState(null);
 
-  // Form State
-  const [formData, setFormData] = useState({
+  // New Patient Form State
+  const [patientForm, setPatientForm] = useState({
     name: '',
     age: 55,
     gender: 'Male',
     blood_group: 'O+',
     disease_stage: 'Stage 5 CKD',
     doctor: 'Dr. Sarah Jenkins',
-    contact: '+1-555-0192',
-    notes: ''
+    contact: '+1 (555) 234-5678'
   });
 
-  const [sessionFormData, setSessionFormData] = useState({
-    machine_id: '',
+  // Start Session Form State
+  const [sessionForm, setSessionForm] = useState({
+    machine_id: machines[0]?.id || 1,
     target_duration_mins: 240,
-    target_uf_volume_ml: 2500,
-    notes: 'Prescribed hemodialysis treatment'
+    target_uf_volume_ml: 2500
   });
 
-  const filteredPatients = (patients || []).filter(p => 
-    p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.patient_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.doctor?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredPatients = patients.filter(p => 
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.patient_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.doctor.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleCreatePatient = async (e) => {
+  const handleAddPatient = async (e) => {
     e.preventDefault();
     try {
-      await createPatient(formData);
-      setIsAddModalOpen(false);
-      setFormData({
+      await createPatient(patientForm);
+      setIsAddPatientOpen(false);
+      setPatientForm({
         name: '',
         age: 55,
         gender: 'Male',
         blood_group: 'O+',
         disease_stage: 'Stage 5 CKD',
         doctor: 'Dr. Sarah Jenkins',
-        contact: '+1-555-0192',
-        notes: ''
+        contact: '+1 (555) 234-5678'
       });
       if (onNotification) {
         onNotification({
           type: 'success',
-          title: 'Patient Added',
-          message: `Successfully registered patient ${formData.name}.`
+          title: 'Patient Registered',
+          message: `Patient record created successfully.`
         });
       }
-      onRefresh();
+      if (onRefresh) onRefresh();
     } catch (err) {
       console.error('Create patient error:', err);
+      if (onNotification) {
+        onNotification({
+          type: 'danger',
+          title: 'Registration Error',
+          message: err.response?.data?.detail || 'Failed to create patient.'
+        });
+      }
     }
   };
 
   const handleStartSession = async (e) => {
     e.preventDefault();
+    if (!selectedPatientForSession) return;
     try {
-      const res = await createSession({
+      await createSession({
         patient_id: selectedPatientForSession.id,
-        machine_id: sessionFormData.machine_id ? Number(sessionFormData.machine_id) : (machines?.[0]?.id || 1),
-        status: 'ONGOING',
-        target_duration_mins: Number(sessionFormData.target_duration_mins),
-        target_uf_volume_ml: Number(sessionFormData.target_uf_volume_ml),
-        notes: sessionFormData.notes
+        machine_id: Number(sessionForm.machine_id),
+        target_duration_mins: Number(sessionForm.target_duration_mins),
+        target_uf_volume_ml: Number(sessionForm.target_uf_volume_ml)
       });
-      setIsSessionModalOpen(false);
+      setIsStartSessionOpen(false);
+      setSelectedPatientForSession(null);
       if (onNotification) {
         onNotification({
           type: 'success',
-          title: 'Session Started',
-          message: `Dialysis session ${res.data.session_code} is now ONGOING.`
+          title: 'Dialysis Session Started',
+          message: `Session assigned to machine for ${selectedPatientForSession.name}.`
         });
       }
-      onRefresh();
-      if (onSelectSession) onSelectSession(res.data);
+      if (onRefresh) onRefresh();
     } catch (err) {
       console.error('Start session error:', err);
+      if (onNotification) {
+        onNotification({
+          type: 'danger',
+          title: 'Session Creation Error',
+          message: err.response?.data?.detail || 'Failed to start dialysis session.'
+        });
+      }
     }
   };
 
   return (
     <div className="space-y-6">
-      {/* Header & Controls */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-black text-slate-100 tracking-tight flex items-center gap-2">
-            <Users className="h-6 w-6 text-cyan-400" />
-            Patient Clinical Registry
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+            <Users className="h-6 w-6 text-sky-600" />
+            Patient Registry & Hemodialysis Dispatch
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400">
-            Manage chronic kidney disease patient profiles, prescriptions & hemodialysis sessions
+          <p className="text-xs sm:text-sm text-slate-500 font-medium">
+            Manage chronic kidney disease (CKD) patient records and launch new dialysis sessions
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-xs font-bold shadow-md shadow-cyan-600/30 transition-all"
-          >
-            <UserPlus className="h-4 w-4" />
-            <span>Add New Patient</span>
-          </button>
+        <button
+          onClick={() => setIsAddPatientOpen(true)}
+          className="flex items-center space-x-1.5 px-3.5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold shadow-sm shadow-sky-600/20 transition-all self-start sm:self-auto"
+        >
+          <UserPlus className="h-4 w-4" />
+          <span>Add New Patient</span>
+        </button>
+      </div>
+
+      {/* Search & Stats Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-sm">
+        <div className="relative w-full sm:w-80">
+          <Search className="h-4 w-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by name, ID, or doctor..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-9.5 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:bg-white transition-all"
+          />
+        </div>
+        <div className="text-xs text-slate-500 font-medium">
+          Showing <span className="font-bold text-slate-900">{filteredPatients.length}</span> of {patients.length} registered patients
         </div>
       </div>
 
-      {/* Search Filter */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center gap-2">
-        <Search className="h-4 w-4 text-slate-400 ml-1" />
-        <input 
-          type="text"
-          placeholder="Search by patient name, ID (e.g. PAT-101), or nephrologist..."
-          className="bg-transparent text-xs text-slate-200 focus:outline-none w-full placeholder:text-slate-500"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
-
-      {/* Patients Table */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+      {/* Patient Table */}
+      <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
+            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 font-semibold uppercase tracking-wider text-[11px]">
               <tr>
-                <th className="py-3 px-4">Patient Code</th>
-                <th className="py-3 px-4">Name & Demographics</th>
-                <th className="py-3 px-4">Blood Group</th>
-                <th className="py-3 px-4">Diagnosis / Stage</th>
-                <th className="py-3 px-4">Nephrologist</th>
-                <th className="py-3 px-4">Contact</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3.5 px-5">Patient Details</th>
+                <th className="py-3.5 px-5">Age / Gender</th>
+                <th className="py-3.5 px-5">Blood Group</th>
+                <th className="py-3.5 px-5">Disease Stage</th>
+                <th className="py-3.5 px-5">Nephrologist</th>
+                <th className="py-3.5 px-5">Contact</th>
+                <th className="py-3.5 px-5 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
-              {filteredPatients.map((p) => {
-                const patientSession = (sessions || []).find(s => s.patient_id === p.id && s.status === 'ONGOING');
-                return (
-                  <tr key={p.id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-cyan-400">
-                      {p.patient_id}
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-bold text-slate-100">{p.name}</div>
-                      <div className="text-[11px] text-slate-400">{p.age} yrs • {p.gender}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded bg-slate-950 border border-slate-700 text-slate-200 font-bold font-mono">
-                        {p.blood_group}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-slate-300 font-medium">
-                      {p.disease_stage}
-                    </td>
-                    <td className="py-3 px-4 text-slate-300">
-                      {p.doctor}
-                    </td>
-                    <td className="py-3 px-4 text-slate-400 font-mono">
-                      {p.contact}
-                    </td>
-                    <td className="py-3 px-4 text-right space-x-2">
-                      {patientSession ? (
-                        <button
-                          onClick={() => onSelectSession && onSelectSession(patientSession)}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-950 text-emerald-400 border border-emerald-800 text-[11px] font-bold inline-flex items-center gap-1 hover:bg-emerald-900/60"
-                        >
-                          <Activity className="h-3 w-3" /> Live Session
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setSelectedPatientForSession(p);
-                            setIsSessionModalOpen(true);
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-cyan-950 text-cyan-400 border border-cyan-800 text-[11px] font-bold inline-flex items-center gap-1 hover:bg-cyan-900/60"
-                        >
-                          <Play className="h-3 w-3" /> Start Session
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+            <tbody className="divide-y divide-slate-100">
+              {filteredPatients.map((patient) => (
+                <tr key={patient.id} className="hover:bg-slate-50/70 transition-colors">
+                  <td className="py-3.5 px-5">
+                    <div className="font-bold text-slate-900">{patient.name}</div>
+                    <div className="text-[11px] font-mono text-sky-700">{patient.patient_id}</div>
+                  </td>
+                  <td className="py-3.5 px-5 text-slate-700 font-medium">
+                    {patient.age} yrs • {patient.gender}
+                  </td>
+                  <td className="py-3.5 px-5">
+                    <span className="px-2.5 py-0.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-200 font-bold text-[11px]">
+                      {patient.blood_group}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-5">
+                    <span className="font-semibold text-slate-800">{patient.disease_stage}</span>
+                  </td>
+                  <td className="py-3.5 px-5 text-slate-700 font-medium">
+                    {patient.doctor}
+                  </td>
+                  <td className="py-3.5 px-5 text-slate-500 font-mono text-[11px]">
+                    {patient.contact}
+                  </td>
+                  <td className="py-3.5 px-5 text-right">
+                    <button
+                      onClick={() => {
+                        setSelectedPatientForSession(patient);
+                        setIsStartSessionOpen(true);
+                      }}
+                      className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-bold shadow-2xs transition-all"
+                    >
+                      <Play className="h-3.5 w-3.5 fill-current" />
+                      <span>Start Session</span>
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       </div>
 
       {/* Add Patient Modal */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h2 className="text-base font-bold text-slate-100">Register New Patient</h2>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-white">
+      {isAddPatientOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-sky-600" />
+                Register New CKD Patient
+              </h2>
+              <button onClick={() => setIsAddPatientOpen(false)} className="text-slate-400 hover:text-slate-700">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreatePatient} className="space-y-3 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+            <form onSubmit={handleAddPatient} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-600 font-semibold mb-1">Full Legal Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Clara Oswald"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white"
+                  value={patientForm.name}
+                  onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1">Age</label>
+                  <label className="block text-slate-600 font-semibold mb-1">Age</label>
                   <input
                     type="number"
                     required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none"
-                    value={formData.age}
-                    onChange={(e) => setFormData({ ...formData, age: Number(e.target.value) })}
+                    min="1"
+                    max="120"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white"
+                    value={patientForm.age}
+                    onChange={(e) => setPatientForm({ ...patientForm, age: Number(e.target.value) })}
                   />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1">Gender</label>
+                  <label className="block text-slate-600 font-semibold mb-1">Gender</label>
                   <select
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none"
-                    value={formData.gender}
-                    onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white"
+                    value={patientForm.gender}
+                    onChange={(e) => setPatientForm({ ...patientForm, gender: e.target.value })}
                   >
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
@@ -260,11 +264,11 @@ export default function Patients({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1">Blood Group</label>
+                  <label className="block text-slate-600 font-semibold mb-1">Blood Group</label>
                   <select
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none"
-                    value={formData.blood_group}
-                    onChange={(e) => setFormData({ ...formData, blood_group: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white"
+                    value={patientForm.blood_group}
+                    onChange={(e) => setPatientForm({ ...patientForm, blood_group: e.target.value })}
                   >
                     <option value="O+">O+</option>
                     <option value="O-">O-</option>
@@ -279,63 +283,54 @@ export default function Patients({
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1">Disease Stage</label>
-                <input
-                  type="text"
-                  required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none"
-                  value={formData.disease_stage}
-                  onChange={(e) => setFormData({ ...formData, disease_stage: e.target.value })}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-400 mb-1">Nephrologist / Doctor</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none"
-                    value={formData.doctor}
-                    onChange={(e) => setFormData({ ...formData, doctor: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1">Contact Phone</label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none"
-                    value={formData.contact}
-                    onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
-                  />
-                </div>
+                <label className="block text-slate-600 font-semibold mb-1">Disease Stage</label>
+                <select
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white"
+                  value={patientForm.disease_stage}
+                  onChange={(e) => setPatientForm({ ...patientForm, disease_stage: e.target.value })}
+                >
+                  <option value="Stage 5 CKD">Stage 5 CKD (End-Stage Renal Disease)</option>
+                  <option value="Stage 4 CKD">Stage 4 CKD (Severe GFR 15-29)</option>
+                  <option value="Acute Kidney Injury">Acute Kidney Injury (AKI)</option>
+                </select>
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1">Clinical Notes</label>
-                <textarea
-                  rows="2"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Vascular access details, allergies, ultrafiltration targets..."
+                <label className="block text-slate-600 font-semibold mb-1">Attending Nephrologist</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Dr. Sarah Jenkins"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white"
+                  value={patientForm.doctor}
+                  onChange={(e) => setPatientForm({ ...patientForm, doctor: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-600 font-semibold mb-1">Contact Phone</label>
+                <input
+                  type="text"
+                  placeholder="+1 (555) 000-0000"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white font-mono"
+                  value={patientForm.contact}
+                  onChange={(e) => setPatientForm({ ...patientForm, contact: e.target.value })}
                 />
               </div>
 
               <div className="flex justify-end space-x-2 pt-3">
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg"
+                  onClick={() => setIsAddPatientOpen(false)}
+                  className="px-3.5 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold shadow-md shadow-cyan-600/30"
+                  className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl font-bold shadow-sm shadow-sky-600/20"
                 >
-                  Save Patient
+                  Save Patient Record
                 </button>
               </div>
             </form>
@@ -344,31 +339,35 @@ export default function Patients({
       )}
 
       {/* Start Session Modal */}
-      {isSessionModalOpen && selectedPatientForSession && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h2 className="text-base font-bold text-slate-100">
-                Start Dialysis: {selectedPatientForSession.name}
-              </h2>
-              <button onClick={() => setIsSessionModalOpen(false)} className="text-slate-400 hover:text-white">
+      {isStartSessionOpen && selectedPatientForSession && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Play className="h-5 w-5 text-emerald-600 fill-current" />
+                  Initiate Dialysis Session
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">
+                  Patient: <span className="text-slate-800 font-bold">{selectedPatientForSession.name}</span>
+                </p>
+              </div>
+              <button onClick={() => setIsStartSessionOpen(false)} className="text-slate-400 hover:text-slate-700">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             <form onSubmit={handleStartSession} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-400 mb-1">Assign Dialysis Unit</label>
+                <label className="block text-slate-600 font-semibold mb-1">Assign Hemodialyzer Unit</label>
                 <select
-                  required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none"
-                  value={sessionFormData.machine_id}
-                  onChange={(e) => setSessionFormData({ ...sessionFormData, machine_id: e.target.value })}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white font-semibold"
+                  value={sessionForm.machine_id}
+                  onChange={(e) => setSessionForm({ ...sessionForm, machine_id: e.target.value })}
                 >
-                  <option value="">Select Machine...</option>
-                  {(machines || []).map(m => (
+                  {machines.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.machine_code} ({m.model}) - {m.status} [{m.location}]
+                      {m.machine_code} • {m.model} ({m.status}) - {m.location}
                     </option>
                   ))}
                 </select>
@@ -376,50 +375,46 @@ export default function Patients({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-400 mb-1">Target Duration (min)</label>
+                  <label className="block text-slate-600 font-semibold mb-1">Target Duration (Minutes)</label>
                   <input
                     type="number"
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none"
-                    value={sessionFormData.target_duration_mins}
-                    onChange={(e) => setSessionFormData({ ...sessionFormData, target_duration_mins: e.target.value })}
+                    min="60"
+                    max="480"
+                    step="30"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white"
+                    value={sessionForm.target_duration_mins}
+                    onChange={(e) => setSessionForm({ ...sessionForm, target_duration_mins: e.target.value })}
                   />
+                  <span className="text-[10px] text-slate-400">Standard: 240 mins (4h)</span>
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1">Target UF Volume (mL)</label>
+                  <label className="block text-slate-600 font-semibold mb-1">Prescribed UF Volume (mL)</label>
                   <input
                     type="number"
-                    required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none"
-                    value={sessionFormData.target_uf_volume_ml}
-                    onChange={(e) => setSessionFormData({ ...sessionFormData, target_uf_volume_ml: e.target.value })}
+                    min="500"
+                    max="5000"
+                    step="100"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-slate-800 focus:outline-none focus:border-sky-500 focus:bg-white"
+                    value={sessionForm.target_uf_volume_ml}
+                    onChange={(e) => setSessionForm({ ...sessionForm, target_uf_volume_ml: e.target.value })}
                   />
+                  <span className="text-[10px] text-slate-400">Target Fluid Removal</span>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-400 mb-1">Session Protocol Notes</label>
-                <textarea
-                  rows="2"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-200 focus:border-cyan-500 focus:outline-none"
-                  value={sessionFormData.notes}
-                  onChange={(e) => setSessionFormData({ ...sessionFormData, notes: e.target.value })}
-                />
               </div>
 
               <div className="flex justify-end space-x-2 pt-3">
                 <button
                   type="button"
-                  onClick={() => setIsSessionModalOpen(false)}
-                  className="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg"
+                  onClick={() => setIsStartSessionOpen(false)}
+                  className="px-3.5 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-bold shadow-md shadow-cyan-600/30"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold shadow-sm shadow-emerald-600/20"
                 >
-                  Launch Treatment
+                  Launch Treatment Session
                 </button>
               </div>
             </form>

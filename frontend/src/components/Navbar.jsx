@@ -8,8 +8,8 @@ import {
   FileText, 
   Layers, 
   Radio, 
-  SlidersHorizontal,
-  Clock
+  Clock,
+  ChevronDown
 } from 'lucide-react';
 
 export default function Navbar({ 
@@ -41,42 +41,42 @@ export default function Navbar({
     { id: 'machines', label: 'Machines', icon: Layers },
     { 
       id: 'alerts', 
-      label: 'Smart Alerts', 
+      label: 'Clinical Alerts', 
       icon: AlertTriangle, 
       count: criticalAlertCount > 0 ? criticalAlertCount : null 
     },
-    { id: 'reports', label: 'Session Reports', icon: FileText },
+    { id: 'reports', label: 'Clinical Reports', icon: FileText },
   ];
 
   return (
-    <header className="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 sticky top-0 z-40">
+    <header className="bg-white/95 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-500 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-              <Activity className="h-6 w-6 text-white animate-pulse" />
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-sky-600 to-cyan-500 flex items-center justify-center shadow-md shadow-sky-500/20">
+              <Activity className="h-6 w-6 text-white" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="font-extrabold text-lg tracking-tight bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-400 bg-clip-text text-transparent">
-                  DialySense AI
+                <span className="font-extrabold text-lg tracking-tight text-slate-900">
+                  DialySense <span className="text-sky-600">AI</span>
                 </span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-800/60 font-mono font-bold">
-                  IoT v1.0
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 font-semibold">
+                  Clinical CDSS
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 leading-none">Smart Dialysis Decision Support</p>
+              <p className="text-[11px] text-slate-500 font-medium">Hemodialysis IoT Telemetry & Decision Support</p>
             </div>
           </div>
 
           {/* Session Selector & Live Telemetry Badge */}
           <div className="hidden md:flex items-center space-x-3">
             {sessions && sessions.length > 0 && (
-              <div className="flex items-center bg-slate-950/60 border border-slate-800 rounded-lg px-2.5 py-1 text-xs">
-                <span className="text-slate-400 mr-2">Session:</span>
+              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs shadow-xs">
+                <span className="text-slate-400 font-medium mr-2">Active Session:</span>
                 <select 
-                  className="bg-transparent text-cyan-300 font-semibold focus:outline-none cursor-pointer"
+                  className="bg-transparent text-slate-800 font-semibold focus:outline-none cursor-pointer pr-1"
                   value={activeSession?.id || ''}
                   onChange={(e) => {
                     const found = sessions.find(s => s.id === Number(e.target.value));
@@ -84,8 +84,8 @@ export default function Navbar({
                   }}
                 >
                   {sessions.map(s => (
-                    <option key={s.id} value={s.id} className="bg-slate-900 text-slate-200">
-                      {s.session_code} - {s.patient?.name || `Patient #${s.patient_id}`} ({s.status})
+                    <option key={s.id} value={s.id} className="bg-white text-slate-800">
+                      {s.session_code} • {s.patient?.name || `Patient #${s.patient_id}`} ({s.status})
                     </option>
                   ))}
                 </select>
@@ -93,26 +93,26 @@ export default function Navbar({
             )}
 
             {/* WebSocket Pulse Badge */}
-            <div className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+            <div className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${
               isConnected 
-                ? 'bg-emerald-950/50 text-emerald-400 border-emerald-800/60 shadow-sm shadow-emerald-500/20' 
-                : 'bg-rose-950/50 text-rose-400 border-rose-800/60'
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-xs' 
+                : 'bg-rose-50 text-rose-700 border-rose-200'
             }`}>
-              <span className={`h-2 w-2 rounded-full ${isConnected ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'}`} />
-              <Radio className="h-3 w-3" />
+              <span className={`h-2 w-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-ping' : 'bg-rose-500'}`} />
+              <Radio className="h-3.5 w-3.5" />
               <span>{isConnected ? 'ESP32 STREAMING' : 'OFFLINE'}</span>
             </div>
 
             {/* Clock */}
-            <div className="flex items-center space-x-1 text-slate-400 text-xs font-mono bg-slate-950/40 px-2 py-1 rounded border border-slate-800">
-              <Clock className="h-3 w-3 text-slate-500" />
-              <span>{timeStr}</span>
+            <div className="flex items-center space-x-1.5 text-slate-600 text-xs font-mono bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-200">
+              <Clock className="h-3.5 w-3.5 text-slate-400" />
+              <span className="font-semibold">{timeStr}</span>
             </div>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <nav className="flex space-x-1 overflow-x-auto pb-2 pt-1 border-t border-slate-800/60 no-scrollbar">
+        <nav className="flex space-x-1.5 overflow-x-auto pb-2 pt-1 border-t border-slate-100 no-scrollbar">
           {navItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -120,21 +120,21 @@ export default function Navbar({
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all duration-200 ${
+                className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
                   isActive
-                    ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    ? 'bg-sky-50 text-sky-700 border border-sky-200 shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/70 border border-transparent'
                 }`}
               >
-                <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
+                <Icon className={`h-4 w-4 ${isActive ? 'text-sky-600' : 'text-slate-400'}`} />
                 <span>{item.label}</span>
                 {item.badge && (
-                  <span className="px-1.5 py-0.2 text-[9px] font-bold rounded bg-cyan-500/30 text-cyan-300 border border-cyan-400/40 animate-pulse">
+                  <span className="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-sky-600 text-white animate-pulse">
                     {item.badge}
                   </span>
                 )}
                 {item.count && (
-                  <span className="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-rose-500 text-white animate-bounce">
+                  <span className="px-1.5 py-0.2 text-[9px] font-bold rounded-full bg-rose-600 text-white animate-bounce">
                     {item.count}
                   </span>
                 )}
