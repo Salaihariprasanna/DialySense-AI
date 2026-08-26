@@ -24,7 +24,6 @@ export default function DemoControls({ activeSession, activePatient, onNotificat
       setLoadingMode(true);
       await setSimulationMode(mode, sessionId, patientId);
       setCurrentMode(mode);
-      // Immediately trigger 1 tick so the live dashboard updates instantly without waiting
       await triggerSimulationTick(sessionId, patientId, mode);
       
       const modeText = mode === 'RISK' ? 'HIGH RISK COLLAPSE' : (mode === 'MACHINE_ERROR' ? 'MACHINE ERROR' : 'NORMAL BASELINE');
@@ -73,11 +72,11 @@ export default function DemoControls({ activeSession, activePatient, onNotificat
   };
 
   return (
-    <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+    <div className="bg-white border-2 border-slate-300 rounded-2xl p-4 shadow-sm">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         {/* Title / Badge */}
         <div className="flex items-center space-x-3">
-          <div className="p-2 rounded-xl bg-amber-50 text-amber-600 border border-amber-200/60">
+          <div className="p-2 rounded-xl bg-amber-50 text-amber-700 border-2 border-amber-300">
             <Radio className="h-4 w-4" />
           </div>
           <div>
@@ -85,10 +84,10 @@ export default function DemoControls({ activeSession, activePatient, onNotificat
               <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
                 Telemetry Simulation Controller
               </span>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+              <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-extrabold uppercase tracking-wider border-2 ${
                 currentMode === 'NORMAL' 
-                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                  : (currentMode === 'RISK' ? 'bg-rose-50 text-rose-700 border border-rose-200 animate-pulse' : 'bg-amber-50 text-amber-700 border border-amber-200')
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
+                  : (currentMode === 'RISK' ? 'bg-rose-50 text-rose-800 border-rose-300 animate-pulse' : 'bg-amber-50 text-amber-800 border-amber-300')
               }`}>
                 {currentMode === 'MACHINE_ERROR' ? 'MACHINE ERROR' : currentMode}
               </span>
@@ -103,10 +102,10 @@ export default function DemoControls({ activeSession, activePatient, onNotificat
           <button
             onClick={() => handleModeChange('NORMAL')}
             disabled={loadingMode}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+            className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs border-2 ${
               currentMode === 'NORMAL'
-                ? 'bg-emerald-600 text-white shadow-emerald-600/20 ring-2 ring-emerald-500/30'
-                : 'bg-slate-50 text-emerald-700 hover:bg-emerald-50 border border-slate-200'
+                ? 'bg-emerald-600 text-white border-emerald-700 shadow-emerald-600/20'
+                : 'bg-slate-50 text-emerald-800 hover:bg-emerald-50 border-slate-300'
             }`}
           >
             <ShieldCheck className="h-3.5 w-3.5" />
@@ -117,10 +116,10 @@ export default function DemoControls({ activeSession, activePatient, onNotificat
           <button
             onClick={() => handleModeChange('RISK')}
             disabled={loadingMode}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+            className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs border-2 ${
               currentMode === 'RISK'
-                ? 'bg-rose-600 text-white shadow-rose-600/20 ring-2 ring-rose-500/30 animate-pulse'
-                : 'bg-slate-50 text-rose-700 hover:bg-rose-50 border border-slate-200'
+                ? 'bg-rose-600 text-white border-rose-700 shadow-rose-600/20 animate-pulse'
+                : 'bg-slate-50 text-rose-800 hover:bg-rose-50 border-slate-300'
             }`}
           >
             <AlertOctagon className="h-3.5 w-3.5" />
@@ -131,46 +130,46 @@ export default function DemoControls({ activeSession, activePatient, onNotificat
           <button
             onClick={() => handleModeChange('MACHINE_ERROR')}
             disabled={loadingMode}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+            className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs border-2 ${
               currentMode === 'MACHINE_ERROR'
-                ? 'bg-amber-600 text-white shadow-amber-600/20 ring-2 ring-amber-500/30'
-                : 'bg-slate-50 text-amber-700 hover:bg-amber-50 border border-slate-200'
+                ? 'bg-amber-600 text-white border-amber-700 shadow-amber-600/20'
+                : 'bg-slate-50 text-amber-800 hover:bg-amber-50 border-slate-300'
             }`}
           >
             <AlertTriangle className="h-3.5 w-3.5" />
             <span>MACHINE ERROR</span>
           </button>
 
-          <div className="h-5 w-[1px] bg-slate-200 hidden sm:block" />
+          <div className="h-6 w-[2px] bg-slate-300 hidden sm:block" />
 
           {/* Step Tick Button */}
           <button
             onClick={handleManualTick}
             disabled={tickLoading}
-            className="flex items-center space-x-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all shadow-xs"
+            className="flex items-center space-x-1 px-3 py-2 rounded-xl text-xs font-bold bg-slate-50 hover:bg-slate-100 text-slate-800 border-2 border-slate-300 transition-all shadow-2xs"
             title="Inject single step reading"
           >
-            <Zap className={`h-3 w-3 text-sky-600 ${tickLoading ? 'animate-spin' : ''}`} />
+            <Zap className={`h-3.5 w-3.5 text-sky-600 ${tickLoading ? 'animate-spin' : ''}`} />
             <span>Step Tick</span>
           </button>
 
           {/* Auto-Stream Toggle Button */}
           <button
             onClick={handleToggleStream}
-            className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs ${
+            className={`flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-2xs border-2 ${
               isStreaming
-                ? 'bg-sky-600 text-white shadow-sky-600/20'
-                : 'bg-slate-900 text-white hover:bg-slate-800'
+                ? 'bg-sky-600 text-white border-sky-700 shadow-sky-600/20'
+                : 'bg-slate-900 text-white hover:bg-slate-800 border-slate-900'
             }`}
           >
             {isStreaming ? (
               <>
-                <Square className="h-3 w-3 fill-current text-white" />
+                <Square className="h-3.5 w-3.5 fill-current text-white" />
                 <span>Pause Stream</span>
               </>
             ) : (
               <>
-                <Play className="h-3 w-3 fill-current text-sky-300" />
+                <Play className="h-3.5 w-3.5 fill-current text-sky-300" />
                 <span>Auto Stream (3s)</span>
               </>
             )}

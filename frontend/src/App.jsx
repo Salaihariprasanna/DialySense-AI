@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
+import Login from './components/Login';
 import DemoControls from './components/DemoControls';
 import Dashboard from './components/Dashboard';
 import LiveMonitor from './components/LiveMonitor';
@@ -23,6 +24,20 @@ import wsService from './services/websocket';
 import { AlertOctagon, CheckCircle2, X } from 'lucide-react';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dialysense_user');
+      return saved ? JSON.parse(saved) : {
+        username: 'dr_sarah',
+        full_name: 'Dr. Sarah Jenkins',
+        role: 'DOCTOR',
+        email: 'sarah.jenkins@hospital.org'
+      };
+    } catch {
+      return null;
+    }
+  });
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isConnected, setIsConnected] = useState(false);
   
@@ -82,12 +97,14 @@ export default function App() {
   };
 
   useEffect(() => {
-    loadCoreData();
-  }, []);
+    if (currentUser) {
+      loadCoreData();
+    }
+  }, [currentUser]);
 
   // 2. WebSocket Real-Time Integration
   useEffect(() => {
-    if (!activeSession?.id) return;
+    if (!currentUser || !activeSession?.id) return;
 
     wsService.connect(activeSession.id);
     const unbindStatus = wsService.onStatusChange(setIsConnected);
@@ -126,7 +143,12 @@ export default function App() {
       unbindMessage();
       wsService.disconnect();
     };
-  }, [activeSession?.id]);
+  }, [currentUser, activeSession?.id]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('dialysense_user');
+    setCurrentUser(null);
+  };
 
   const handleNotification = (notif) => {
     setToastNotification(notif);
@@ -140,6 +162,10 @@ export default function App() {
     loadSessionTelemetry(session.id);
   };
 
+  if (!currentUser) {
+    return <Login onLoginSuccess={(user) => setCurrentUser(user)} />;
+  }
+
   const stats = {
     totalPatients: patients.length,
     activeSessions: sessions.filter(s => s.status === 'ONGOING').length,
@@ -151,7 +177,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col selection:bg-sky-500 selection:text-white">
-      {/* Top Navigation Bar */}
+      {/* Top Navigation Bar with User Profile & Logout */}
       <Navbar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab}
@@ -160,6 +186,8 @@ export default function App() {
         sessions={sessions}
         onSelectSession={handleSelectSession}
         criticalAlertCount={unacknowledgedCritical.length}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       {/* Critical Alert Emergency Banner */}
@@ -176,7 +204,7 @@ export default function App() {
           </div>
           <button
             onClick={() => setActiveTab('alerts')}
-            className="px-3 py-1 bg-white text-rose-700 rounded-lg text-xs font-black uppercase hover:bg-rose-50 transition-all shrink-0 ml-3 shadow-2xs"
+            className="px-3 py-1 bg-white text-rose-700 rounded-lg text-xs font-black uppercase hover:bg-rose-50 transition-all shrink-0 ml-3 shadow-2xs border border-rose-300"
           >
             Review Alarms ({unacknowledgedCritical.length})
           </button>
@@ -259,16 +287,16 @@ export default function App() {
 
       {/* Floating Toast Notification */}
       {toastNotification && (
-        <div className="fixed bottom-5 right-5 z-50 max-w-sm w-full bg-white border border-slate-200 rounded-2xl p-4 shadow-xl flex items-start justify-between gap-3 animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-5 right-5 z-50 max-w-sm w-full bg-white border-2 border-slate-300 rounded-2xl p-4 shadow-xl flex items-start justify-between gap-3 animate-in slide-in-from-bottom-5">
           <div className="flex items-start space-x-3">
-            <div className={`p-2 rounded-xl mt-0.5 ${
-              toastNotification.type === 'danger' ? 'bg-rose-50 text-rose-600 border border-rose-200' : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+            <div className={`p-2 rounded-xl mt-0.5 border-2 ${
+              toastNotification.type === 'danger' ? 'bg-rose-50 text-rose-600 border-rose-300' : 'bg-emerald-50 text-emerald-600 border-emerald-300'
             }`}>
               {toastNotification.type === 'danger' ? <AlertOctagon className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
             </div>
             <div>
               <h4 className="text-xs font-bold text-slate-900">{toastNotification.title}</h4>
-              <p className="text-xs text-slate-600 mt-0.5">{toastNotification.message}</p>
+              <p className="text-xs text-slate-700 font-medium mt-0.5">{toastNotification.message}</p>
             </div>
           </div>
           <button 
@@ -281,7 +309,7 @@ export default function App() {
       )}
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
+      <footer className="border-t-2 border-slate-200 bg-white py-4 text-center text-xs text-slate-500 font-medium">
         DialySense AI • Clinical Hemodialysis Telemetry, Risk Stratification & Decision Support System
       </footer>
     </div>

@@ -18,7 +18,8 @@ from app.routes import (
     readings_router,
     alerts_router,
     reports_router,
-    simulation_router
+    simulation_router,
+    auth_router
 )
 from app.websocket.manager import ws_manager
 from app.ai.risk_model import get_or_load_model
@@ -172,6 +173,7 @@ app.include_router(readings_router, prefix=settings.API_PREFIX)
 app.include_router(alerts_router, prefix=settings.API_PREFIX)
 app.include_router(reports_router, prefix=settings.API_PREFIX)
 app.include_router(simulation_router, prefix=settings.API_PREFIX)
+app.include_router(auth_router, prefix=settings.API_PREFIX)
 
 # WebSocket Endpoints
 @app.websocket("/ws/monitor/{session_id}")
