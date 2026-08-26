@@ -13,12 +13,12 @@ class AlertEngine:
         risk: Optional[RiskPrediction] = None
     ) -> List[Alert]:
         """
-        Evaluates incoming sensor reading and risk prediction against clinical thresholds.
-        Persists newly generated alerts and returns the list of new alerts.
+        Evaluates incoming sensor reading and clinical risk against physiological thresholds.
+        Persists newly generated alarms using authentic clinical medical terminology.
         """
         new_alerts: List[Alert] = []
 
-        # Helper to avoid flooding duplicate alerts within a 20-second window
+        # Avoid duplicate alarms within a 20-second window
         recent_threshold = datetime.datetime.utcnow() - datetime.timedelta(seconds=20)
         
         def is_duplicate(alert_type: str) -> bool:
@@ -29,7 +29,7 @@ class AlertEngine:
             ).first()
             return existing is not None
 
-        # 1. SpO2 Critical Drop
+        # 1. SpO2 Hypoxemia
         if reading.spo2 < 90.0:
             if not is_duplicate("CRITICAL_HYPOXIA"):
                 new_alerts.append(Alert(
@@ -38,8 +38,8 @@ class AlertEngine:
                     reading_id=reading.id,
                     alert_type="CRITICAL_HYPOXIA",
                     severity="CRITICAL",
-                    title="Critical Oxygen Desaturation",
-                    message=f"Patient SpO2 dropped dangerously to {reading.spo2:.1f}% (< 90%). Provide supplemental O2 immediately."
+                    title="Critical Oxygen Desaturation (Hypoxemia)",
+                    message=f"Patient SpO2 desaturated acutely to {reading.spo2:.1f}% (< 90.0%). Initiate supplemental O2 and verify airway patency."
                 ))
         elif reading.spo2 < 94.0:
             if not is_duplicate("LOW_SPO2"):
@@ -49,11 +49,11 @@ class AlertEngine:
                     reading_id=reading.id,
                     alert_type="LOW_SPO2",
                     severity="WARNING",
-                    title="Low SpO2 Detected",
-                    message=f"SpO2 is low at {reading.spo2:.1f}%. Monitor patient breathing."
+                    title="Suboptimal Oxygen Saturation",
+                    message=f"SpO2 diminished to {reading.spo2:.1f}%. Perform respiratory assessment."
                 ))
 
-        # 2. Blood Pressure (Intradialytic Hypotension / Hypertension)
+        # 2. Blood Pressure (Intradialytic Hypotension / Hypertensive Emergency)
         if reading.systolic_bp < 85.0:
             if not is_duplicate("CRITICAL_HYPOTENSION"):
                 new_alerts.append(Alert(
@@ -62,8 +62,8 @@ class AlertEngine:
                     reading_id=reading.id,
                     alert_type="CRITICAL_HYPOTENSION",
                     severity="CRITICAL",
-                    title="Severe Intradialytic Hypotension",
-                    message=f"Systolic BP dropped to {reading.systolic_bp:.0f} mmHg (< 85 mmHg). Risk of hypovolemic shock. Suspend ultrafiltration."
+                    title="Severe Intradialytic Hypotension (IDH)",
+                    message=f"Systolic arterial pressure collapsed to {reading.systolic_bp:.0f} mmHg (< 85 mmHg). Risk of cerebral/myocardial hypoperfusion. Suspend ultrafiltration and place patient in Trendelenburg position."
                 ))
         elif reading.systolic_bp < 95.0:
             if not is_duplicate("MODERATE_HYPOTENSION"):
@@ -73,8 +73,8 @@ class AlertEngine:
                     reading_id=reading.id,
                     alert_type="MODERATE_HYPOTENSION",
                     severity="WARNING",
-                    title="Hypotension Warning",
-                    message=f"Blood pressure lowering: {reading.systolic_bp:.0f}/{reading.diastolic_bp:.0f} mmHg."
+                    title="Intradialytic Blood Pressure Drop",
+                    message=f"Blood pressure lowering observed: {reading.systolic_bp:.0f}/{reading.diastolic_bp:.0f} mmHg."
                 ))
         elif reading.systolic_bp > 175.0 or reading.diastolic_bp > 105.0:
             if not is_duplicate("HYPERTENSION"):
@@ -84,8 +84,8 @@ class AlertEngine:
                     reading_id=reading.id,
                     alert_type="HYPERTENSION",
                     severity="WARNING",
-                    title="Hypertensive Elevation",
-                    message=f"Elevated blood pressure: {reading.systolic_bp:.0f}/{reading.diastolic_bp:.0f} mmHg."
+                    title="Hypertensive Urgency",
+                    message=f"Acute systemic arterial pressure elevation: {reading.systolic_bp:.0f}/{reading.diastolic_bp:.0f} mmHg."
                 ))
 
         # 3. Heart Rate (Bradycardia / Tachycardia)
@@ -97,8 +97,8 @@ class AlertEngine:
                     reading_id=reading.id,
                     alert_type="CRITICAL_BRADYCARDIA",
                     severity="CRITICAL",
-                    title="Critical Bradycardia",
-                    message=f"Severe low heart rate: {reading.heart_rate:.0f} BPM (< 50 BPM)."
+                    title="Critical Sinus Bradycardia",
+                    message=f"Severe cardiac deceleration: {reading.heart_rate:.0f} BPM (< 50 BPM). Evaluate for hyperkalemia."
                 ))
         elif reading.heart_rate > 125.0:
             if not is_duplicate("CRITICAL_TACHYCARDIA"):
@@ -108,11 +108,11 @@ class AlertEngine:
                     reading_id=reading.id,
                     alert_type="CRITICAL_TACHYCARDIA",
                     severity="CRITICAL",
-                    title="Severe Tachycardia",
-                    message=f"High heart rate: {reading.heart_rate:.0f} BPM (> 125 BPM)."
+                    title="Critical Sinus Tachycardia",
+                    message=f"Severe cardiac acceleration: {reading.heart_rate:.0f} BPM (> 125 BPM). Assess for volume depletion or pyrogenic stress."
                 ))
 
-        # 4. Dialysis Circuit High Pressure (Venous Resistance / Clotting Risk)
+        # 4. Dialysis Extracorporeal Circuit Pressure (Venous Resistance / Clotting Risk)
         if reading.dialysis_pressure > 210.0:
             if not is_duplicate("CRITICAL_HIGH_PRESSURE"):
                 new_alerts.append(Alert(
@@ -121,8 +121,8 @@ class AlertEngine:
                     reading_id=reading.id,
                     alert_type="CRITICAL_HIGH_PRESSURE",
                     severity="CRITICAL",
-                    title="Circuit High Pressure Alarm",
-                    message=f"Venous line pressure reached {reading.dialysis_pressure:.0f} mmHg (> 210 mmHg). Check for needle kink or dialyzer clotting."
+                    title="Extracorporeal Venous High Pressure Alarm",
+                    message=f"Venous return circuit pressure peaked at {reading.dialysis_pressure:.0f} mmHg (> 210 mmHg). Inspect for dialyzer fiber clotting or venous cannula displacement."
                 ))
         elif reading.dialysis_pressure > 175.0:
             if not is_duplicate("ELEVATED_PRESSURE"):
@@ -132,8 +132,8 @@ class AlertEngine:
                     reading_id=reading.id,
                     alert_type="ELEVATED_PRESSURE",
                     severity="WARNING",
-                    title="Elevated Venous Pressure",
-                    message=f"Venous pressure elevated at {reading.dialysis_pressure:.0f} mmHg."
+                    title="Elevated Venous Circuit Resistance",
+                    message=f"Venous return pressure elevated: {reading.dialysis_pressure:.0f} mmHg."
                 ))
 
         # 5. Machine State Alarm
@@ -145,8 +145,8 @@ class AlertEngine:
                     reading_id=reading.id,
                     alert_type="MACHINE_ERROR",
                     severity="CRITICAL",
-                    title="Dialysis Machine Malfunction",
-                    message="Dialysis machine reported critical hardware/pump error. Inspect machine and switch to manual bypass if required."
+                    title="Hemodialysis Machine Hydraulic / Pump Malfunction",
+                    message="Dialyzer unit reported blood pump or hydraulic malfunction. Verify line integrity and switch to manual blood return if necessary."
                 ))
         elif reading.machine_status == "WARNING":
             if not is_duplicate("MACHINE_WARNING"):
@@ -156,21 +156,21 @@ class AlertEngine:
                     reading_id=reading.id,
                     alert_type="MACHINE_WARNING",
                     severity="WARNING",
-                    title="Machine Telemetry Warning",
-                    message="Machine telemetry reported a warning condition."
+                    title="Extracorporeal Circuit Warning Flag",
+                    message="Machine telemetry reported a circuit fluidics warning condition."
                 ))
 
-        # 6. AI High Risk Trigger
+        # 6. Clinical Hemodynamic Instability Surge
         if risk and risk.risk_level == "HIGH" and risk.risk_score >= 80.0:
-            if not is_duplicate("AI_HIGH_RISK_SURGE"):
+            if not is_duplicate("HEMODYNAMIC_INSTABILITY_SURGE"):
                 new_alerts.append(Alert(
                     session_id=reading.session_id,
                     patient_id=reading.patient_id,
                     reading_id=reading.id,
-                    alert_type="AI_HIGH_RISK_SURGE",
+                    alert_type="HEMODYNAMIC_INSTABILITY_SURGE",
                     severity="CRITICAL",
-                    title="AI Clinical Risk Spike",
-                    message=f"AI Risk Score surged to {risk.risk_score:.0f}/100. Immediate clinical review recommended."
+                    title="Acute Hemodynamic Instability Surge",
+                    message=f"Composite clinical risk score reached {risk.risk_score:.0f}/100. Immediate nephrology and bedside nursing review recommended."
                 ))
 
         # Persist alerts

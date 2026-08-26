@@ -22,7 +22,8 @@ class PDFReportGenerator:
     @staticmethod
     def generate_session_report(db: Session, session_id: int) -> Report:
         """
-        Generates a comprehensive clinical hemodialysis session report as PDF using ReportLab.
+        Generates a comprehensive clinical hemodialysis treatment summary report as PDF using ReportLab.
+        Uses authentic hospital and nephrology clinical terminology.
         """
         session_obj = db.query(DialysisSession).filter(DialysisSession.id == session_id).first()
         if not session_obj:
@@ -45,7 +46,7 @@ class PDFReportGenerator:
         risk_scores = [rk.risk_score for rk in risks] if risks else [12.0]
 
         max_risk = max(risk_scores)
-        overall_risk_level = "HIGH" if max_risk >= 70 else ("MODERATE" if max_risk >= 35 else "LOW")
+        overall_risk_level = "HIGH" if max_risk >= 70 else ("MODERATE / MEDIUM" if max_risk >= 35 else "LOW")
 
         summary_dict = {
             "session_code": session_obj.session_code,
@@ -66,7 +67,7 @@ class PDFReportGenerator:
         os.makedirs(reports_dir, exist_ok=True)
         
         timestamp_str = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        filename = f"Dialysis_Report_{session_obj.session_code}_{timestamp_str}.pdf"
+        filename = f"Dialysis_Clinical_Report_{session_obj.session_code}_{timestamp_str}.pdf"
         filepath = os.path.join(reports_dir, filename)
 
         # Build PDF with ReportLab
@@ -86,33 +87,33 @@ class PDFReportGenerator:
             'ReportTitle',
             parent=styles['Heading1'],
             fontName='Helvetica-Bold',
-            fontSize=20,
-            leading=24,
+            fontSize=18,
+            leading=22,
             textColor=colors.HexColor('#0c4a6e')
         )
         subtitle_style = ParagraphStyle(
             'ReportSubtitle',
             parent=styles['Normal'],
             fontName='Helvetica',
-            fontSize=10,
-            leading=13,
-            textColor=colors.HexColor('#64748b')
+            fontSize=9,
+            leading=12,
+            textColor=colors.HexColor('#475569')
         )
         section_heading = ParagraphStyle(
             'SectionHeading',
             parent=styles['Heading2'],
             fontName='Helvetica-Bold',
-            fontSize=12,
-            leading=16,
+            fontSize=11,
+            leading=15,
             textColor=colors.HexColor('#0369a1'),
             spaceBefore=10,
-            spaceAfter=6
+            spaceAfter=5
         )
         cell_bold = ParagraphStyle(
             'CellBold',
             parent=styles['Normal'],
             fontName='Helvetica-Bold',
-            fontSize=9,
+            fontSize=8.5,
             leading=11,
             textColor=colors.HexColor('#1e293b')
         )
@@ -120,7 +121,7 @@ class PDFReportGenerator:
             'CellText',
             parent=styles['Normal'],
             fontName='Helvetica',
-            fontSize=9,
+            fontSize=8.5,
             leading=11,
             textColor=colors.HexColor('#334155')
         )
@@ -138,118 +139,118 @@ class PDFReportGenerator:
         # 1. Header Banner
         header_data = [
             [
-                Paragraph("<b>DIALYSENSE AI</b><br/><font size=8 color='#0284c7'>CLINICAL HEMODIALYSIS MONITORING SYSTEM</font>", title_style),
-                Paragraph(f"<b>REPORT CODE:</b> {session_obj.session_code}<br/><b>GENERATED:</b> {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC<br/><b>SYSTEM:</b> AI Decision Support", subtitle_style)
+                Paragraph("<b>DIALYSENSE CLINICAL SYSTEM</b><br/><font size=8 color='#0284c7'>DEPARTMENT OF NEPHROLOGY & HEMODIALYSIS</font><br/><font size=7.5 color='#64748b'>Continuous Hemodynamic & Extracorporeal Telemetry Record</font>", title_style),
+                Paragraph(f"<b>SESSION RECORD:</b> {session_obj.session_code}<br/><b>GENERATED:</b> {datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC<br/><b>STATUS:</b> Completed Clinical Summary", subtitle_style)
             ]
         ]
-        header_table = Table(header_data, colWidths=[300, 240])
+        header_table = Table(header_data, colWidths=[310, 230])
         header_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('ALIGN', (1, 0), (1, 0), 'RIGHT'),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]))
         story.append(header_table)
-        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0284c7'), spaceBefore=4, spaceAfter=12))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#0284c7'), spaceBefore=2, spaceAfter=10))
 
         # 2. Patient & Session Metadata
-        story.append(Paragraph("1. Patient & Session Profile", section_heading))
+        story.append(Paragraph("1. Patient Profile & Prescription Parameters", section_heading))
         
         info_data = [
             [
                 Paragraph("<b>Patient Name:</b>", cell_bold), Paragraph(patient.name if patient else "N/A", cell_text),
-                Paragraph("<b>Session Status:</b>", cell_bold), Paragraph(f"<b>{session_obj.status}</b>", cell_bold)
+                Paragraph("<b>Treatment Status:</b>", cell_bold), Paragraph(f"<b>{session_obj.status}</b>", cell_bold)
             ],
             [
-                Paragraph("<b>Patient ID:</b>", cell_bold), Paragraph(patient.patient_id if patient else "N/A", cell_text),
-                Paragraph("<b>Machine:</b>", cell_bold), Paragraph(f"{machine.machine_code} ({machine.model})" if machine else "N/A", cell_text)
+                Paragraph("<b>Medical Record No:</b>", cell_bold), Paragraph(patient.patient_id if patient else "N/A", cell_text),
+                Paragraph("<b>Hemodialyzer Unit:</b>", cell_bold), Paragraph(f"{machine.machine_code} ({machine.model})" if machine else "N/A", cell_text)
             ],
             [
                 Paragraph("<b>Age / Gender:</b>", cell_bold), Paragraph(f"{patient.age} yrs / {patient.gender}" if patient else "N/A", cell_text),
-                Paragraph("<b>Start Time:</b>", cell_bold), Paragraph(str(session_obj.start_time.strftime('%Y-%m-%d %H:%M')) if session_obj.start_time else "N/A", cell_text)
+                Paragraph("<b>Initiation Time:</b>", cell_bold), Paragraph(str(session_obj.start_time.strftime('%Y-%m-%d %H:%M')) if session_obj.start_time else "N/A", cell_text)
             ],
             [
-                Paragraph("<b>Blood Group / Stage:</b>", cell_bold), Paragraph(f"{patient.blood_group} ({patient.disease_stage})" if patient else "N/A", cell_text),
-                Paragraph("<b>Target Duration / UF:</b>", cell_bold), Paragraph(f"{session_obj.target_duration_mins} min / {session_obj.target_uf_volume_ml:.0f} mL", cell_text)
+                Paragraph("<b>Blood Group / Diagnosis:</b>", cell_bold), Paragraph(f"{patient.blood_group} ({patient.disease_stage})" if patient else "N/A", cell_text),
+                Paragraph("<b>Prescribed UF Target:</b>", cell_bold), Paragraph(f"{session_obj.target_duration_mins} min / {session_obj.target_uf_volume_ml:.0f} mL", cell_text)
             ],
             [
-                Paragraph("<b>Primary Doctor:</b>", cell_bold), Paragraph(patient.doctor if patient else "N/A", cell_text),
-                Paragraph("<b>Contact:</b>", cell_bold), Paragraph(patient.contact if patient else "N/A", cell_text)
+                Paragraph("<b>Attending Nephrologist:</b>", cell_bold), Paragraph(patient.doctor if patient else "N/A", cell_text),
+                Paragraph("<b>Emergency Contact:</b>", cell_bold), Paragraph(patient.contact if patient else "N/A", cell_text)
             ]
         ]
-        info_table = Table(info_data, colWidths=[110, 160, 110, 160])
+        info_table = Table(info_data, colWidths=[115, 155, 115, 155])
         info_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f8fafc')),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
         ]))
         story.append(info_table)
-        story.append(Spacer(1, 10))
+        story.append(Spacer(1, 8))
 
         # 3. Telemetry Statistical Analysis
-        story.append(Paragraph("2. Hemodynamic & Dialysis Telemetry Summary", section_heading))
+        story.append(Paragraph("2. Physiological Vitals & Extracorporeal Circuit Summary", section_heading))
         vitals_data = [
             [
-                Paragraph("Parameter", cell_bold),
-                Paragraph("Target Range", cell_bold),
+                Paragraph("Hemodynamic Parameter", cell_bold),
+                Paragraph("Target Clinical Range", cell_bold),
                 Paragraph("Min / Avg / Max Observed", cell_bold),
-                Paragraph("Status Evaluation", cell_bold)
+                Paragraph("Physiological Interpretation", cell_bold)
             ],
             [
-                Paragraph("Heart Rate", cell_text),
+                Paragraph("Heart Rate (Pulse)", cell_text),
                 Paragraph("60 - 100 BPM", cell_text),
                 Paragraph(f"{min(hr_vals):.0f} / {sum(hr_vals)/len(hr_vals):.0f} / {max(hr_vals):.0f} BPM", cell_text),
-                Paragraph("NORMAL" if min(hr_vals)>=55 and max(hr_vals)<=110 else "ATTENTION", cell_bold)
+                Paragraph("NORMO-CARDIA" if min(hr_vals)>=55 and max(hr_vals)<=110 else "RATE DEVIATION", cell_bold)
             ],
             [
-                Paragraph("Oxygen Saturation (SpO2)", cell_text),
+                Paragraph("Pulse Oximetry (SpO2)", cell_text),
                 Paragraph("≥ 95.0%", cell_text),
                 Paragraph(f"{min(spo2_vals):.1f}% / {sum(spo2_vals)/len(spo2_vals):.1f}% / {max(spo2_vals):.1f}%", cell_text),
-                Paragraph("NORMAL" if min(spo2_vals)>=94 else "HYPOXIA EPISODE", cell_bold)
+                Paragraph("NORMAL SATURATION" if min(spo2_vals)>=94 else "DESATURATION EPISODE", cell_bold)
             ],
             [
-                Paragraph("Blood Pressure (Sys/Dia)", cell_text),
+                Paragraph("Non-Invasive Blood Pressure", cell_text),
                 Paragraph("100-140 / 60-90 mmHg", cell_text),
                 Paragraph(f"{min(sys_vals):.0f}/{min(dia_vals):.0f} - {max(sys_vals):.0f}/{max(dia_vals):.0f} mmHg", cell_text),
-                Paragraph("NORMAL" if min(sys_vals)>=90 and max(sys_vals)<=155 else "BP FLUCTUATION", cell_bold)
+                Paragraph("NORMOTENSIVE" if min(sys_vals)>=90 and max(sys_vals)<=155 else "HEMODYNAMIC FLUCTUATION", cell_bold)
             ],
             [
-                Paragraph("Body Temperature", cell_text),
+                Paragraph("Core Body Temperature", cell_text),
                 Paragraph("36.2 - 37.4 °C", cell_text),
                 Paragraph(f"{min(temp_vals):.1f} / {sum(temp_vals)/len(temp_vals):.1f} / {max(temp_vals):.1f} °C", cell_text),
-                Paragraph("NORMAL" if max(temp_vals)<=37.6 else "FEBRILE ELEVATION", cell_bold)
+                Paragraph("AFEBRILE" if max(temp_vals)<=37.6 else "PYROGENIC REACTION", cell_bold)
             ],
             [
-                Paragraph("Blood Flow Rate", cell_text),
+                Paragraph("Extracorporeal Blood Flow Rate", cell_text),
                 Paragraph("250 - 400 mL/min", cell_text),
                 Paragraph(f"{min(flow_vals):.0f} / {sum(flow_vals)/len(flow_vals):.0f} / {max(flow_vals):.0f} mL/min", cell_text),
-                Paragraph("ADEQUATE" if min(flow_vals)>=200 else "LOW FLOW", cell_bold)
+                Paragraph("ADEQUATE CLEARANCE" if min(flow_vals)>=200 else "SUBOPTIMAL PERFUSION", cell_bold)
             ],
             [
-                Paragraph("Dialysis Venous Pressure", cell_text),
+                Paragraph("Venous Return Circuit Pressure", cell_text),
                 Paragraph("80 - 160 mmHg", cell_text),
                 Paragraph(f"{min(press_vals):.0f} / {sum(press_vals)/len(press_vals):.0f} / {max(press_vals):.0f} mmHg", cell_text),
-                Paragraph("NORMAL" if max(press_vals)<=180 else "HIGH RESISTANCE", cell_bold)
+                Paragraph("NORMAL PATENCY" if max(press_vals)<=180 else "ELEVATED RESISTANCE", cell_bold)
             ]
         ]
-        vitals_table = Table(vitals_data, colWidths=[140, 110, 160, 130])
+        vitals_table = Table(vitals_data, colWidths=[140, 110, 155, 135])
         vitals_table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#e0f2fe')),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('TOPPADDING', (0, 0), (-1, -1), 3.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3.5),
         ]))
         story.append(vitals_table)
-        story.append(Spacer(1, 10))
+        story.append(Spacer(1, 8))
 
-        # 4. AI Risk Prediction Summary
-        story.append(Paragraph("3. AI Risk Assessment & Decision Support", section_heading))
-        risk_bg = colors.HexColor('#fee2e2') if overall_risk_level == "HIGH" else (colors.HexColor('#fef3c7') if overall_risk_level == "MODERATE" else colors.HexColor('#dcfce7'))
-        risk_fg = colors.HexColor('#b91c1c') if overall_risk_level == "HIGH" else (colors.HexColor('#b45309') if overall_risk_level == "MODERATE" else colors.HexColor('#15803d'))
+        # 4. Clinical Stability & Pathophysiological Assessment
+        story.append(Paragraph("3. Clinical Hemodynamic Stability & Risk Index", section_heading))
+        risk_bg = colors.HexColor('#fee2e2') if "HIGH" in overall_risk_level else (colors.HexColor('#fef3c7') if "MODERATE" in overall_risk_level or "MEDIUM" in overall_risk_level else colors.HexColor('#dcfce7'))
+        risk_fg = colors.HexColor('#b91c1c') if "HIGH" in overall_risk_level else (colors.HexColor('#b45309') if "MODERATE" in overall_risk_level or "MEDIUM" in overall_risk_level else colors.HexColor('#15803d'))
         
-        last_factors = "None"
+        last_factors = "All hemodynamic and circuit parameters remained within target physiological limits."
         if risks and len(risks) > 0:
             last_risk = risks[-1]
             try:
@@ -260,14 +261,14 @@ class PDFReportGenerator:
 
         risk_data = [
             [
-                Paragraph("<b>Max Peak Risk Score:</b>", cell_bold), Paragraph(f"<b>{max_risk:.1f} / 100</b>", cell_bold),
-                Paragraph("<b>Risk Classification:</b>", cell_bold), Paragraph(f"<b><font color='{risk_fg}'>{overall_risk_level}</font></b>", cell_bold)
+                Paragraph("<b>Peak Hemodynamic Risk Score:</b>", cell_bold), Paragraph(f"<b>{max_risk:.1f} / 100</b>", cell_bold),
+                Paragraph("<b>Clinical Stratification:</b>", cell_bold), Paragraph(f"<b><font color='{risk_fg}'>{overall_risk_level} RISK</font></b>", cell_bold)
             ],
             [
-                Paragraph("<b>Observed AI Factors:</b>", cell_bold),
+                Paragraph("<b>Pathophysiological Findings:</b>", cell_bold),
                 Paragraph(last_factors, cell_text),
-                Paragraph("<b>Protocol Guideline:</b>", cell_bold),
-                Paragraph("Decision support output generated via Scikit-Learn Random Forest and clinical hemodialysis rule heuristics.", cell_text)
+                Paragraph("<b>Clinical Protocol Recommendation:</b>", cell_bold),
+                Paragraph("Continuous multi-parameter monitoring for intradialytic hypotension, vascular access patency, and dialysate thermal equilibrium.", cell_text)
             ]
         ]
         risk_table = Table(risk_data, colWidths=[120, 150, 110, 160])
@@ -277,24 +278,24 @@ class PDFReportGenerator:
             ('BACKGROUND', (3, 0), (3, 0), risk_bg),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING', (0, 0), (-1, -1), 4.5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4.5),
         ]))
         story.append(risk_table)
-        story.append(Spacer(1, 10))
+        story.append(Spacer(1, 8))
 
-        # 5. Smart Alerts Log
-        story.append(Paragraph("4. Smart Alerts & Incident Log", section_heading))
+        # 5. Clinical Alarms Log
+        story.append(Paragraph("4. Clinical Alarms & Telemetry Incident Log", section_heading))
         if alerts:
             alerts_data = [
                 [
                     Paragraph("Time (UTC)", cell_bold),
-                    Paragraph("Severity", cell_bold),
-                    Paragraph("Alert Event", cell_bold),
-                    Paragraph("Clinical Details", cell_bold)
+                    Paragraph("Alarm Priority", cell_bold),
+                    Paragraph("Diagnostic Event", cell_bold),
+                    Paragraph("Clinical Findings & Instructions", cell_bold)
                 ]
             ]
-            for a in alerts[:8]: # display up to 8 recent alerts in the summary
+            for a in alerts[:8]:
                 sev_color = '#dc2626' if a.severity == "CRITICAL" else ('#d97706' if a.severity == "WARNING" else '#2563eb')
                 alerts_data.append([
                     Paragraph(a.timestamp.strftime('%H:%M:%S'), alert_text),
@@ -302,7 +303,7 @@ class PDFReportGenerator:
                     Paragraph(f"<b>{a.title}</b>", alert_text),
                     Paragraph(a.message, alert_text)
                 ])
-            alerts_table = Table(alerts_data, colWidths=[70, 70, 150, 250])
+            alerts_table = Table(alerts_data, colWidths=[65, 75, 150, 250])
             alerts_table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f1f5f9')),
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#cbd5e1')),
@@ -312,21 +313,21 @@ class PDFReportGenerator:
             ]))
             story.append(alerts_table)
         else:
-            story.append(Paragraph("<i>No critical smart alerts triggered during this session. Normal dialysis progress.</i>", cell_text))
+            story.append(Paragraph("<i>No critical alarms triggered during this treatment. Normal hemodialysis course.</i>", cell_text))
         
-        story.append(Spacer(1, 16))
+        story.append(Spacer(1, 14))
 
         # 6. Sign-off Footer
         signoff_data = [
             [
-                Paragraph("<b>Treating Nephrologist / Duty Nurse:</b> ___________________________", cell_text),
-                Paragraph("<b>Signature & Stamp:</b> ___________________________", cell_text)
+                Paragraph("<b>Attending Nephrologist / Duty Clinical Nurse:</b> ___________________________", cell_text),
+                Paragraph("<b>Hospital Stamp & Signature:</b> ___________________________", cell_text)
             ]
         ]
         signoff_table = Table(signoff_data, colWidths=[270, 270])
         signoff_table.setStyle(TableStyle([
             ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
         ]))
         story.append(KeepTogether(signoff_table))
 

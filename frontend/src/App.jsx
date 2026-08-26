@@ -236,6 +236,8 @@ export default function App() {
         {activeTab === 'machines' && (
           <Machines 
             machines={machines}
+            onRefresh={loadCoreData}
+            onNotification={handleNotification}
           />
         )}
 
