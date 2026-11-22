@@ -13,8 +13,10 @@ __pycache__/
 
 # Databases & Runtime Files
 *.db
+*.db-journal
 *.sqlite3
 reports/*.pdf
+backend/reports/*.pdf
 
 # IDE & OS
 .vscode/
